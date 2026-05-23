@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import { getSupabase } from "./db/supabase";
+import { imagesRoute } from "./routes/images";
+import { decksRoute } from "./routes/decks";
+import { cardsRoute } from "./routes/cards";
+import type { Context, Next } from "hono";
+import type { Bindings } from "./types";
 
 const app = new Hono<{ Bindings: Bindings }>();
-
-type Bindings = {
-	SUPABASE_URL: string;
-	SUPABASE_ANON_KEY: string;
-};
 
 app.get("/", c => {
 	return c.text("Hello Hono!");
@@ -19,68 +19,18 @@ app.get("/random", c => {
 	return c.text(text);
 });
 
-app.use("*", async (c, next) => {
+app.use("*", async (c: Context, next: Next) => {
 	c.set("supabase", getSupabase(c.env));
 	await next();
 });
 
 // CARDS
-app.get("/card/all", async c => {
-	const supabase = c.get("supabase");
-	const { data: cards } = await supabase.from("Card_Table").select();
-	console.log({ cards });
-	return c.json({ message: "retrieving all cards", data: cards });
-});
-
-app.get("/card/:id", async c => {
-	const id = c.req.param("id");
-	const supabase = c.get("supabase");
-	const { data: cards } = await supabase
-		.from("Card_Table")
-		.select()
-		.eq("id", id);
-	return c.json({ message: `retrieving card ${id}`, data: cards });
-});
-
-app.post("/card", async c => {
-	const body = c.req.parseBody();
-	console.log({ body });
-	// const { error } = await supabase.from("Card_Table").insert({ front, back });
-	return c.text("adding new card");
-});
+app.route("card", cardsRoute);
 
 // DECKS
-app.get("/deck/all", c => {
-	return c.text("retrieving all decks");
-});
-
-app.get("/deck/:id", c => {
-	const id = c.req.param("id");
-	return c.text(`retrieving deck ${id}`);
-});
-
-app.put("/deck/:id", c => {
-	const id = c.req.param("id");
-	return c.text(`updating deck ${id}`);
-});
-
-app.post("/deck", c => {
-	return c.text("adding new deck");
-});
+app.route("deck", decksRoute);
 
 // IMAGES
-app.get("/image/:id", c => {
-	const id = c.req.param("id");
-	return c.text(`retrieving image ${id}`);
-});
-
-app.put("/image/:id", c => {
-	const id = c.req.param("id");
-	return c.text(`updating image ${id}`);
-});
-
-app.post("/image", c => {
-	return c.text("adding new image");
-});
+app.route("image", imagesRoute);
 
 export default app;
